@@ -4,8 +4,8 @@ import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ChummyChummy Admin',
-  description: 'ChummyChummy Admin Dashboard',
+  title: 'My Ally Admin',
+  description: 'My Ally Admin Dashboard',
 };
 
 export default function RootLayout({
