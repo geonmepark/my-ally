@@ -56,7 +56,6 @@
 
 :root {
   --radius: 0.625rem;
-  /* ChummyChummy Primary (#99B7BC main / #004C57 dark accent) - Light Mode */
   --background: #f3f5f8;
   --foreground: #111418;
   --card: #ffffff;
@@ -130,7 +129,6 @@
 }
 
 .dark {
-  /* ChummyChummy Primary - Dark Mode */
   --background: #090b0f;
   --foreground: #eeeeee;
   --card: #111418;
@@ -646,3 +644,973 @@ body:has([data-state='open'][role='dialog']) [data-sonner-toaster] {
     transform: translateX(100%);
   }
 }
+
+/* ============================================================
+   MY-ALLY COURTROOM
+   밝고 친근한 픽셀 게임 스타일 — mobile-first, PC centered
+   ============================================================ */
+
+/* ── 배경 ── */
+.mc-scene {
+  min-height: 100vh;
+  background: linear-gradient(160deg, #B8DEFF 0%, #DCF0FF 50%, #EEF8FF 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+/* ── 재판장 박스 (폰 프레임) ── */
+.mc-courtroom {
+  width: 100%;
+  max-width: 460px;
+  background: #FAF5EC;
+  border: 3px solid #5A3E28;
+  border-radius: 0;
+  box-shadow: 5px 5px 0 rgba(90, 62, 40, 0.3), 0 0 0 1px rgba(90, 62, 40, 0.15);
+  overflow: hidden;
+}
+
+/* ── 헤더 ── */
+.mc-header {
+  background: #2B3F5C;
+  border-bottom: 3px solid #1A2A40;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mc-header-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mc-header-title {
+  color: #FFD94D;
+  font-size: clamp(0.7rem, 3.5vw, 0.95rem);
+  text-shadow: 2px 2px 0 #8B6A00;
+  letter-spacing: 0.04em;
+  line-height: 1.3;
+}
+
+.mc-room-code {
+  color: #A8C8FF;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 2px 10px;
+  cursor: pointer;
+  border: 1px solid rgba(168, 200, 255, 0.3);
+  transition: background 0.15s;
+}
+.mc-room-code:hover { background: rgba(0, 0, 0, 0.4); }
+
+/* 토치 */
+.mc-torch-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.mc-torch-fire {
+  width: 10px;
+  height: 12px;
+  background: radial-gradient(ellipse at 50% 80%, #FFF9C4, #FFB300 55%, #E65100 90%, transparent 100%);
+  border-radius: 50% 50% 40% 40%;
+  box-shadow: 0 0 6px #FFB020, 0 0 12px rgba(255, 130, 0, 0.3);
+  animation: mc-flicker 1.5s ease-in-out infinite alternate;
+}
+
+.mc-torch-stick {
+  width: 4px;
+  height: 14px;
+  background: linear-gradient(to right, #6D4C2A, #A0722A, #6D4C2A);
+}
+
+@keyframes mc-flicker {
+  0%   { transform: scaleX(1)    skewX(-3deg); opacity: 0.92; }
+  40%  { transform: scaleX(1.1)  skewX(2deg);  opacity: 1;    }
+  100% { transform: scaleX(0.95) skewX(-2deg); opacity: 0.88; }
+}
+
+/* ── 판사석 (뒷벽) ── */
+.mc-judge-section {
+  background: #F5EDD8;
+  background-image:
+    linear-gradient(rgba(180, 150, 100, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 150, 100, 0.08) 1px, transparent 1px);
+  background-size: 24px 24px;
+  border-bottom: 3px solid #D4B47A;
+  padding: 20px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 단상 */
+.mc-platform {
+  background: linear-gradient(to bottom, #F0C060 0%, #E0A840 100%);
+  border: 3px solid #8B6020;
+  box-shadow:
+    inset 0 3px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.12),
+    0 6px 0 #6A4010,
+    0 8px 0 rgba(0, 0, 0, 0.18);
+  padding: 16px 32px 18px;
+  width: 100%;
+  max-width: 290px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.mc-platform-step {
+  width: min(250px, 80%);
+  height: 10px;
+  background: linear-gradient(to bottom, #D4A050, #C09040);
+  border: 2px solid #8B6020;
+  border-top: none;
+  box-shadow: 0 4px 0 #4A2800, 0 6px 0 rgba(0, 0, 0, 0.15);
+  margin-top: -2px;
+}
+
+/* McHead 픽셀 아트 헤드 */
+.mc-head-wrap {
+  image-rendering: pixelated;
+  display: block;
+}
+
+.mc-nameplate {
+  background: #FFD94D;
+  border: 2px solid #C8A000;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.1),
+    1px 2px 0 rgba(0, 0, 0, 0.2);
+  padding: 4px 22px;
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #2A1800;
+  letter-spacing: 0.15em;
+}
+
+/* 말풍선 */
+.mc-speech-bubble {
+  position: relative;
+  background: #FFFFFF;
+  border: 2px solid #5A3E28;
+  box-shadow: 2px 2px 0 rgba(90, 62, 40, 0.2);
+  padding: 7px 14px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #2A1800;
+  text-align: center;
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.mc-speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 9px solid #5A3E28;
+}
+
+.mc-speech-bubble::before {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid #FFFFFF;
+}
+
+/* 도트 애니메이션 */
+.mc-dots {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  height: 10px;
+}
+
+.mc-dots span {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #5A3E28;
+  border-radius: 1px;
+  animation: mc-dot-bounce 0.9s ease-in-out infinite;
+}
+
+.mc-dots span:nth-child(2) { animation-delay: 0.18s; }
+.mc-dots span:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes mc-dot-bounce {
+  0%, 100% { transform: translateY(0);   opacity: 0.5; }
+  50%       { transform: translateY(-5px); opacity: 1;   }
+}
+
+/* ── 바닥 섹션 ── */
+.mc-floor-section {
+  background: repeating-linear-gradient(
+    90deg,
+    #EDD898 0px, #EDD898 63px,
+    #E0C880 63px, #E0C880 64px
+  );
+  border-top: 3px solid #C8A850;
+  padding: 14px 8px 18px;
+  display: grid;
+  grid-template-columns: 12px 1fr 1fr 12px;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 160px;
+}
+
+.mc-pillar {
+  align-self: stretch;
+  background: linear-gradient(to right, #C89040, #E0A840, #C89040);
+  border: 2px solid #7A5010;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.mc-desk {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+/* 책상 표면 */
+.mc-desk-surface {
+  background: #FFFFFF;
+  border: 3px solid #9AA8C0;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    0 4px 0 #7080A0,
+    0 6px 0 rgba(0, 0, 0, 0.12);
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.mc-desk-surface--blue {
+  border-color: #2563EB;
+  background: linear-gradient(to bottom, #EFF6FF, #DBEAFE);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    0 4px 0 #1D4ED8,
+    0 6px 0 rgba(0, 0, 0, 0.12);
+}
+
+.mc-desk-surface--red {
+  border-color: #DC2626;
+  background: linear-gradient(to bottom, #FFF5F5, #FEE2E2);
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.8),
+    0 4px 0 #B91C1C,
+    0 6px 0 rgba(0, 0, 0, 0.12);
+}
+
+/* 책상 위 캐릭터 헤드 */
+.mc-desk-char {
+  image-rendering: pixelated;
+  display: block;
+  /* McHead SVG가 직접 들어옴 */
+}
+
+.mc-desk-label {
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: #1E1A14;
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mc-desk-status {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border: 1.5px solid;
+  width: 100%;
+  text-align: center;
+}
+
+.mc-desk-status.waiting {
+  color: #78716C;
+  border-color: #D6D3D1;
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.mc-desk-status.submitted {
+  color: #166534;
+  border-color: #86EFAC;
+  background: rgba(134, 239, 172, 0.25);
+}
+
+.mc-desk-placeholder {
+  height: 38px; /* 버튼 높이만큼 공간 유지 */
+}
+
+/* ── 버튼 ── */
+.mc-btn {
+  font-family: var(--font-pretendard);
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+  border-radius: 0;
+  border: 2px solid;
+  padding: 9px 0;
+  width: 100%;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1;
+  transition: none;
+}
+
+.mc-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.mc-btn-blue {
+  background: linear-gradient(to bottom, #3B82F6, #2563EB);
+  border-color: #1D4ED8;
+  box-shadow: 0 4px 0 #1E40AF, inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.mc-btn-blue:hover:not(:disabled) { background: linear-gradient(to bottom, #60A5FA, #3B82F6); }
+.mc-btn-blue:active:not(:disabled) { box-shadow: none; transform: translateY(4px); }
+
+.mc-btn-red {
+  background: linear-gradient(to bottom, #EF4444, #DC2626);
+  border-color: #B91C1C;
+  box-shadow: 0 4px 0 #991B1B, inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.mc-btn-red:hover:not(:disabled) { background: linear-gradient(to bottom, #F87171, #EF4444); }
+.mc-btn-red:active:not(:disabled) { box-shadow: none; transform: translateY(4px); }
+
+.mc-btn-green {
+  background: linear-gradient(to bottom, #22C55E, #16A34A);
+  border-color: #15803D;
+  box-shadow: 0 4px 0 #166534, inset 0 1px 0 rgba(255,255,255,0.3);
+  color: #fff;
+}
+.mc-btn-green:hover:not(:disabled) { background: linear-gradient(to bottom, #4ADE80, #22C55E); }
+.mc-btn-green:active:not(:disabled) { box-shadow: none; transform: translateY(4px); }
+
+.mc-btn-gray {
+  background: linear-gradient(to bottom, #6B7280, #4B5563);
+  border-color: #374151;
+  box-shadow: 0 4px 0 #1F2937, inset 0 1px 0 rgba(255,255,255,0.2);
+  color: #fff;
+}
+.mc-btn-gray:hover:not(:disabled) { background: linear-gradient(to bottom, #9CA3AF, #6B7280); }
+.mc-btn-gray:active:not(:disabled) { box-shadow: none; transform: translateY(4px); }
+
+.mc-btn-outline {
+  background: transparent;
+  border-color: #5A3E28;
+  box-shadow: 0 3px 0 rgba(90,62,40,0.3);
+  color: #5A3E28;
+  text-shadow: none;
+}
+.mc-btn-outline:hover:not(:disabled) { background: rgba(90,62,40,0.06); }
+.mc-btn-outline:active:not(:disabled) { box-shadow: none; transform: translateY(3px); }
+
+/* ── 로비 섹션 ── */
+.mc-lobby-section {
+  background: #FAF5EC;
+  border-top: 3px solid #D4B47A;
+  padding: 20px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mc-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #9A8060;
+}
+.mc-divider::before, .mc-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #D4B47A;
+}
+
+/* ── 폼 ── */
+.mc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mc-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #5A3E28;
+  letter-spacing: 0.04em;
+}
+
+.mc-input {
+  font-family: var(--font-pretendard);
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1A1A1A;
+  background: #FFFBF4;
+  border: 2px solid #C8A060;
+  border-radius: 0;
+  padding: 10px 12px;
+  width: 100%;
+  outline: none;
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.05);
+  transition: border-color 0.15s;
+}
+.mc-input:focus { border-color: #8B6020; background: #FFFFF8; }
+
+.mc-input-code {
+  font-size: 1.2rem;
+  letter-spacing: 0.3em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.mc-form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* 버튼이 1개일 때 자동으로 전체 너비 */
+.mc-form-actions > :only-child {
+  grid-column: 1 / -1;
+}
+
+.mc-error {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #DC2626;
+  padding: 4px 8px;
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+}
+
+/* ── 제출 오버레이 ── */
+.mc-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 20, 10, 0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+  padding: 0;
+}
+
+@media (min-width: 480px) {
+  .mc-overlay {
+    align-items: center;
+    padding: 16px;
+  }
+}
+
+.mc-overlay-panel {
+  width: 100%;
+  max-width: 460px;
+  background: #FAF5EC;
+  border: 3px solid #5A3E28;
+  border-bottom: none;
+  box-shadow: 0 -4px 0 rgba(90, 62, 40, 0.2);
+  padding: 20px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 480px) {
+  .mc-overlay-panel {
+    border: 3px solid #5A3E28;
+    box-shadow: 5px 5px 0 rgba(90, 62, 40, 0.3);
+  }
+}
+
+.mc-overlay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mc-side-badge-a {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #1D4ED8;
+  background: #DBEAFE;
+  border: 2px solid #2563EB;
+  padding: 4px 14px;
+}
+
+.mc-side-badge-b {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #B91C1C;
+  background: #FEE2E2;
+  border: 2px solid #DC2626;
+  padding: 4px 14px;
+}
+
+.mc-overlay-hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #6B5A3A;
+  line-height: 1.6;
+}
+
+.mc-textarea {
+  font-family: var(--font-pretendard);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1A1A1A;
+  background: #FFFBF4;
+  border: 2px solid #C8A060;
+  border-radius: 0;
+  padding: 10px 12px;
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  outline: none;
+  line-height: 1.6;
+  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.05);
+}
+.mc-textarea:focus { border-color: #8B6020; background: #FFFFF8; }
+
+.mc-char-count {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #9A8060;
+  text-align: right;
+  margin-top: -6px;
+}
+
+/* ── 판결 화면 ── */
+.mc-verdict-view {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.mc-winner-banner {
+  font-size: 0.85rem;
+  font-weight: 900;
+  text-align: center;
+  padding: 10px 16px;
+  border: 2px solid;
+  letter-spacing: 0.04em;
+}
+
+.mc-winner-banner.win {
+  background: #ECFDF5;
+  color: #065F46;
+  border-color: #6EE7B7;
+}
+
+.mc-winner-banner.lose {
+  background: #FFF7ED;
+  color: #7C2D12;
+  border-color: #FED7AA;
+}
+
+.mc-winner-banner.draw {
+  background: #EFF6FF;
+  color: #1E3A8A;
+  border-color: #BFDBFE;
+}
+
+.mc-verdict-text {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2A1800;
+  line-height: 1.75;
+  background: #FFFBF4;
+  border: 1.5px solid #D4B47A;
+  padding: 12px 14px;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+/* ── 저울 애니메이션 (분석 중) ── */
+@keyframes scales-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  20%  { transform: rotate(-13deg); }
+  60%  { transform: rotate(13deg); }
+}
+
+.mc-scales-beam {
+  animation: scales-tilt 2.8s ease-in-out infinite;
+  transform-origin: 36px 10px;
+  transform-box: view-box;
+}
+
+.mc-scales-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 6px;
+}
+
+/* ── 망치 애니메이션 (판결 완료) ── */
+@keyframes gavel-strike {
+  0%, 100% { transform: rotate(-30deg); }
+  25%  { transform: rotate(12deg); }
+  35%  { transform: rotate(-25deg); }
+  50%  { transform: rotate(12deg); }
+  60%  { transform: rotate(-20deg); }
+  75%  { transform: rotate(12deg); }
+  85%  { transform: rotate(-30deg); }
+}
+
+.mc-gavel-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.mc-gavel-pivot {
+  transform-origin: 32px 48px;
+  animation: gavel-strike 1.6s ease-in-out infinite;
+}
+
+/* ── 분석 중 섹션 ── */
+.mc-analyzing-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px 12px 16px;
+  gap: 6px;
+}
+
+.mc-analyzing-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #5C3A1A;
+  letter-spacing: 0.04em;
+  animation: pulse-opacity 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse-opacity {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+/* ── 판결 준비 섹션 ── */
+.mc-verdict-ready {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 20px;
+  gap: 10px;
+}
+
+.mc-verdict-ready-text {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #2B3F5C;
+  letter-spacing: 0.04em;
+}
+
+.mc-btn-gold {
+  background: linear-gradient(180deg, #FFE066 0%, #F0C040 60%, #D4A820 100%);
+  color: #3A2600;
+  border: 2px solid #3A2600;
+  box-shadow: 0 4px 0 #3A2600;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+.mc-btn-gold:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #3A2600;
+}
+
+.mc-reveal-btn {
+  width: 100%;
+  font-size: 0.82rem;
+}
+
+/* ── 추가 질문 (논점 불일치 시) ── */
+.mc-clarification-question {
+  background: #FFF8EC;
+  border: 2px solid #D4B47A;
+  border-radius: 2px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.mc-clarification-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #7A5C3A;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.mc-clarification-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #2A1800;
+  line-height: 1.6;
+}
+
+.mc-clarify-btn {
+  font-size: 0.72rem;
+}
+
+/* ── 판결 후 내 이야기 보기 ── */
+.mc-my-story-section {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mc-my-story-toggle {
+  font-size: 0.72rem;
+  width: 100%;
+}
+
+.mc-my-story-text {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #4A3A2A;
+  line-height: 1.65;
+  background: #F5F0E8;
+  border: 1.5px solid #C8B08A;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+/* ── 판결문 마크다운 렌더링 ── */
+.mc-verdict-md {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #2A1800;
+  line-height: 1.75;
+  background: #FFFBF4;
+  border: 1.5px solid #D4B47A;
+  padding: 12px 14px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.mc-verdict-h2 {
+  font-size: 0.82rem;
+  font-weight: 900;
+  color: #2B3F5C;
+  margin: 6px 0 4px;
+  padding-bottom: 4px;
+  border-bottom: 1.5px solid #D4B47A;
+}
+
+.mc-verdict-h3 {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #2B3F5C;
+  margin: 4px 0 2px;
+}
+
+.mc-verdict-section-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #5C3A1A;
+  margin-top: 8px;
+  margin-bottom: 2px;
+  letter-spacing: 0.02em;
+}
+
+.mc-verdict-line {
+  margin: 1px 0;
+}
+
+.mc-verdict-spacer {
+  height: 6px;
+}
+
+/* ── 판결 모달 ── */
+.mc-verdict-modal {
+  position: relative;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.mc-modal-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  font-weight: 900;
+  color: #7A5C3A;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+.mc-modal-close:hover { color: #2B3F5C; }
+
+.mc-modal-header {
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #2B3F5C;
+  letter-spacing: 0.06em;
+  text-align: center;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #D4B47A;
+}
+
+/* ── 판결 말풍선 버튼 ── */
+.mc-speech-verdict {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.mc-verdict-peek-btn {
+  display: block;
+  width: 100%;
+  background: linear-gradient(180deg, #FFE066 0%, #F0C040 60%, #D4A820 100%);
+  color: #3A2600;
+  border: 2px solid #3A2600;
+  box-shadow: 0 3px 0 #3A2600;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 6px 10px;
+  cursor: pointer;
+  letter-spacing: 0.03em;
+  margin-top: 2px;
+}
+.mc-verdict-peek-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #3A2600;
+}
+
+/* ── 소형 망치 애니메이션 (판결 완료 — 결이 손 옆) ── */
+.mc-small-gavel-wrap {
+  position: absolute;
+  right: -32px;
+  bottom: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.mc-small-gavel-pivot {
+  transform-origin: 13px 19px;
+  animation: gavel-strike 1.6s ease-in-out 1 forwards;
+}
+
+/* ── 재심 배너 ── */
+.mc-appeal-banner {
+  background: #FFF3CD;
+  border: 2px solid #E6A800;
+  border-radius: 2px;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #3A2600;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.mc-appeal-text {
+  margin-top: 6px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: #5A4000;
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.mc-appeal-sent-banner {
+  background: #E8F0FF;
+  border: 2px solid #5C8AE6;
+  border-radius: 2px;
+  padding: 8px 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1A2E5C;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+/* ── 내 이야기 구분선 ── */
+.mc-my-story-divider {
+  text-align: center;
+  font-size: 0.65rem;
+  color: #8A7A6A;
+  margin: 8px 0;
+  border-top: 1px dashed #C8B08A;
+  padding-top: 8px;
+}
+
+/* ── 퇴소하기 영역 ── */
+.mc-exit-section {
+  padding: 8px 12px 12px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mc-exit-btn {
+  font-size: 0.72rem;
+  color: #5C3A1A;
+  border-color: #C8A87A;
+  flex: 1;
+}
+
+/* ── PC: 중앙 고정폭 ── */
+@media (min-width: 768px) {
+  .mc-scene {
+    padding: 32px 16px;
+  }
+
+  .mc-courtroom {
+    box-shadow:
+      0 0 0 1px rgba(90, 62, 40, 0.15),
+      6px 8px 0 rgba(90, 62, 40, 0.25),
+      0 20px 40px rgba(0, 0, 0, 0.1);
+  }
+}
+
