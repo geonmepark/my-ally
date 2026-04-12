@@ -5,5 +5,5 @@ export function logout() {
   const cookies = new Cookies();
   cookies.remove(cookieNames.actName, { path: '/' });
   cookies.remove(cookieNames.rftName, { path: '/' });
-  window.location.href = '/login';
+  window.location.href = '/';
 }
