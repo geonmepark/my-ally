@@ -130,7 +130,7 @@ function PingButton() {
         onClick={ping}
         disabled={state === 'loading'}
       >
-        {state === 'loading' ? '결이 연결 확인 중...' : '결이 연결 테스트'}
+        {state === 'loading' ? '결이 연결 확인 중...' : '결이 연결 테스트1'}
       </button>
       {msg && (
         <div style={{ marginTop: 6, fontSize: '0.65rem', color: state === 'ok' ? '#4caf50' : '#e53935' }}>
