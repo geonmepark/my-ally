@@ -652,19 +652,20 @@ body:has([data-state='open'][role='dialog']) [data-sonner-toaster] {
 
 /* ── 배경 ── */
 .mc-scene {
-  min-height: 100vh;
+  height: 100dvh;
   background: linear-gradient(160deg, #B8DEFF 0%, #DCF0FF 50%, #EEF8FF 100%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 16px;
+  padding: 0;
 }
 
 /* ── 재판장 박스 (폰 프레임) ── */
 .mc-courtroom {
   width: 100%;
   max-width: 460px;
+  flex: 1;
+  min-height: 0;
   background: #FAF5EC;
   border: 3px solid #5A3E28;
   border-radius: 0;
@@ -1470,7 +1471,7 @@ body:has([data-state='open'][role='dialog']) [data-sonner-toaster] {
 /* ── 판결 모달 ── */
 .mc-verdict-modal {
   position: relative;
-  max-height: 85vh;
+  max-height: 85dvh;
   overflow-y: auto;
 }
 
