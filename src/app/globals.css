@@ -1086,7 +1086,7 @@ body:has([data-state='open'][role='dialog']) [data-sonner-toaster] {
 
 .mc-input {
   font-family: var(--font-pretendard);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: #1A1A1A;
   background: #FFFBF4;
@@ -1200,7 +1200,7 @@ body:has([data-state='open'][role='dialog']) [data-sonner-toaster] {
 
 .mc-textarea {
   font-family: var(--font-pretendard);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: #1A1A1A;
   background: #FFFBF4;
