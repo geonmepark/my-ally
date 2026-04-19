@@ -1,5 +1,6 @@
 import { joinRoom } from '@/lib/roomStore'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
@@ -17,6 +18,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
 
   if ('error' in result) {
     return NextResponse.json({ error: result.error }, { status: 404 })
+  }
+
+  // 로그인한 유저라면 user_id_b 저장
+  const authHeader = req.headers.get('authorization')
+  if (authHeader) {
+    const token = authHeader.replace('Bearer ', '')
+    const adminClient = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    const { data: { user } } = await adminClient.auth.getUser(token)
+    if (user) {
+      await adminClient.from('rooms').update({ user_id_b: user.id }).eq('code', code)
+    }
   }
 
   return NextResponse.json({
