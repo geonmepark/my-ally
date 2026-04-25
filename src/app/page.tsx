@@ -198,7 +198,6 @@ function LobbyScreen({ onSession }: { onSession: (s: Session) => void }) {
               <button className="mc-btn mc-btn-green" onClick={() => { setMode('create'); setError('') }}>⚔ 새 케이스 만들기</button>
               <div className="mc-divider">또는</div>
               <button className="mc-btn mc-btn-gray" onClick={() => { setMode('join'); setError('') }}>🔑 코드로 참여하기</button>
-              <PingButton />
             </>
           )}
           {mode === 'create' && (
