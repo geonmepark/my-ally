@@ -21,3 +21,22 @@ create table if not exists rooms (
 
 -- RLS(Row Level Security) 비활성화 — API Route에서 service_role key로 접근
 alter table rooms disable row level security;
+
+-- 외부(로그인 불가) 사용자가 제출하는 계정 삭제 요청
+-- 앱 내 인증된 삭제는 별도(DELETE /api/account)로 처리한다.
+create table if not exists account_deletion_requests (
+  id            uuid         primary key default gen_random_uuid(),
+  email         text         not null,
+  reason        text,
+  source        text         not null default 'web',
+  status        text         not null default 'pending',  -- pending | processed | rejected
+  processed_at  timestamptz,
+  processed_by  text,
+  note          text,
+  created_at    timestamptz  not null default now()
+);
+
+create index if not exists account_deletion_requests_status_idx
+  on account_deletion_requests (status, created_at desc);
+
+alter table account_deletion_requests disable row level security;
