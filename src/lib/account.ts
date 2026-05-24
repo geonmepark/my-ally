@@ -58,10 +58,11 @@ async function anonymizeUserRooms(userId: string) {
     .eq('user_id_b', userId)
 }
 
-// 완전 삭제: 방 익명화 + auth 계정 삭제. (푸시 토큰 정리는 Phase 2에서 추가)
+// 완전 삭제: 방 익명화 + 푸시 토큰 제거 + auth 계정 삭제.
 export async function purgeUser(userId: string) {
   const db = getSupabase()
   await anonymizeUserRooms(userId)
+  await db.from('push_tokens').delete().eq('user_id', userId)
   await db.auth.admin.deleteUser(userId)
   await db.from('pending_account_deletions').delete().eq('user_id', userId)
 }

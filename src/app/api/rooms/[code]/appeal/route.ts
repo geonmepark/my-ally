@@ -1,5 +1,6 @@
 import { getRoom, updateRoom } from '@/lib/roomStore'
 import { requestRetrial } from '../submit/route'
+import { notifyAppeal } from '@/lib/push'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
     }
     const updated = await updateRoom(code, { appealBy: side as 'A' | 'B', status: 'appealing' })
     if (!updated) return NextResponse.json({ error: '처리 중 오류가 발생했어요. DB 컬럼이 없거나 연결 오류일 수 있어요.' }, { status: 500 })
+    notifyAppeal(code).catch(() => {})
     return NextResponse.json({ success: true })
   }
 

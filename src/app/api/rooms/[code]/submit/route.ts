@@ -1,4 +1,5 @@
 import { getRoom, updateRoom, Room } from '@/lib/roomStore'
+import { notifyVerdict } from '@/lib/push'
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
 import Groq from 'groq-sdk'
@@ -138,6 +139,7 @@ export async function analyzeAndDecide(
       const winner = text.includes('[승자: B]') ? 'B' : 'A'
       const cleanText = text.replace(/\[승자: (A|B)\]/g, '').trim()
       await updateRoom(code, { status: 'verdict', verdictText: cleanText, winner })
+      notifyVerdict(code).catch(() => {})
     }
   }
 
@@ -181,6 +183,7 @@ export async function requestFinalVerdict(
     const winner = text.includes('[승자: B]') ? 'B' : 'A'
     const cleanText = text.replace(/\[승자: (A|B)\]/g, '').trim()
     await updateRoom(code, { status: 'verdict', verdictText: cleanText, winner })
+    notifyVerdict(code).catch(() => {})
   }
 
   try {
@@ -357,6 +360,7 @@ export async function requestRetrial(code: string, room: Room) {
     const winner = text.includes('[승자: B]') ? 'B' : 'A'
     const cleanText = text.replace(/\[승자: (A|B)\]/g, '').trim()
     await updateRoom(code, { status: 'verdict', verdictText: cleanText, winner, retrialDone: true })
+    notifyVerdict(code).catch(() => {})
   }
 
   const prompt = buildRetrialPrompt(room)

@@ -25,6 +25,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "expo-server-sdk": "^6.1.0",
     "groq-sdk": "^1.1.2",
     "js-sha256": "^0.11.1",
     "jwt-decode": "^4.0.0",

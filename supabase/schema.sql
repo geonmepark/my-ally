@@ -76,3 +76,25 @@ create table if not exists reports (
 create index if not exists reports_status_idx on reports (status, created_at desc);
 
 alter table reports disable row level security;
+
+-- 푸시 알림 토큰 (Expo push token). 사용자당 여러 기기 가능.
+create table if not exists push_tokens (
+  token       text         primary key,
+  user_id     uuid         not null,
+  platform    text,
+  updated_at  timestamptz  not null default now()
+);
+
+create index if not exists push_tokens_user_idx on push_tokens (user_id);
+
+alter table push_tokens disable row level security;
+
+-- 원격 설정(공지/문의 등). 코드 재배포 없이 값만 바꾼다.
+-- 예: ('notice','점검 안내...'), ('notice_active','true'), ('contact_email','...')
+create table if not exists app_config (
+  key         text         primary key,
+  value       text,
+  updated_at  timestamptz  not null default now()
+);
+
+alter table app_config disable row level security;
