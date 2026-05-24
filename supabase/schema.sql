@@ -40,3 +40,39 @@ create index if not exists account_deletion_requests_status_idx
   on account_deletion_requests (status, created_at desc);
 
 alter table account_deletion_requests disable row level security;
+
+-- 앱 내 인증된 탈퇴: 유예 기간(기본 6개월) 동안 보류했다가 경과 시 완전 삭제.
+-- 유예 기간 내 재로그인하면 행을 제거해 계정을 복구한다.
+-- 완전 삭제 시 auth 계정 제거 + rooms.user_id_a/b null + 닉네임 익명화(주장 텍스트는 상대방 위해 보존).
+create table if not exists pending_account_deletions (
+  user_id       uuid         primary key,
+  email         text,
+  scheduled_at  timestamptz  not null,   -- 이 시각 이후 완전 삭제 대상
+  requested_at  timestamptz  not null default now()
+);
+
+create index if not exists pending_account_deletions_scheduled_idx
+  on pending_account_deletions (scheduled_at);
+
+alter table pending_account_deletions disable row level security;
+
+-- 사용자 신고 (UGC 콘텐츠/사용자 신고 — Apple Guideline 1.2)
+-- 운영자는 status='pending' 건을 24시간 내 검토한다.
+create table if not exists reports (
+  id                uuid         primary key default gen_random_uuid(),
+  room_code         varchar(6),
+  reported_side     text,                                  -- 'A' | 'B' (신고당한 쪽)
+  reported_user_id  uuid,                                  -- 방에서 파악되면 채움
+  reporter_user_id  uuid,                                  -- 신고자 (로그인 사용자)
+  reason            text         not null,                 -- abuse | hate | defamation | spam | inappropriate | etc
+  detail            text,
+  status            text         not null default 'pending', -- pending | reviewed | actioned | dismissed
+  created_at        timestamptz  not null default now(),
+  reviewed_at       timestamptz,
+  reviewed_by       text,
+  note              text
+);
+
+create index if not exists reports_status_idx on reports (status, created_at desc);
+
+alter table reports disable row level security;
