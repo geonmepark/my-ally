@@ -19,8 +19,9 @@ create table if not exists rooms (
   created_at      bigint       not null
 );
 
--- RLS(Row Level Security) 비활성화 — API Route에서 service_role key로 접근
-alter table rooms disable row level security;
+-- RLS 활성화 + 정책 없음(deny-all): anon/authenticated 직접 접근 차단.
+-- 모든 DB 접근은 API Route(service_role, RLS 우회) 경유. 클라이언트 직접 호출 금지.
+alter table rooms enable row level security;
 
 -- 외부(로그인 불가) 사용자가 제출하는 계정 삭제 요청
 -- 앱 내 인증된 삭제는 별도(DELETE /api/account)로 처리한다.
@@ -39,7 +40,7 @@ create table if not exists account_deletion_requests (
 create index if not exists account_deletion_requests_status_idx
   on account_deletion_requests (status, created_at desc);
 
-alter table account_deletion_requests disable row level security;
+alter table account_deletion_requests enable row level security;
 
 -- 앱 내 인증된 탈퇴: 유예 기간(기본 6개월) 동안 보류했다가 경과 시 완전 삭제.
 -- 유예 기간 내 재로그인하면 행을 제거해 계정을 복구한다.
@@ -54,7 +55,7 @@ create table if not exists pending_account_deletions (
 create index if not exists pending_account_deletions_scheduled_idx
   on pending_account_deletions (scheduled_at);
 
-alter table pending_account_deletions disable row level security;
+alter table pending_account_deletions enable row level security;
 
 -- 사용자 신고 (UGC 콘텐츠/사용자 신고 — Apple Guideline 1.2)
 -- 운영자는 status='pending' 건을 24시간 내 검토한다.
@@ -75,7 +76,7 @@ create table if not exists reports (
 
 create index if not exists reports_status_idx on reports (status, created_at desc);
 
-alter table reports disable row level security;
+alter table reports enable row level security;
 
 -- 푸시 알림 토큰 (Expo push token). 사용자당 여러 기기 가능.
 create table if not exists push_tokens (
@@ -87,7 +88,7 @@ create table if not exists push_tokens (
 
 create index if not exists push_tokens_user_idx on push_tokens (user_id);
 
-alter table push_tokens disable row level security;
+alter table push_tokens enable row level security;
 
 -- 원격 설정(공지/문의 등). 코드 재배포 없이 값만 바꾼다.
 -- 예: ('notice','점검 안내...'), ('notice_active','true'), ('contact_email','...')
@@ -97,4 +98,4 @@ create table if not exists app_config (
   updated_at  timestamptz  not null default now()
 );
 
-alter table app_config disable row level security;
+alter table app_config enable row level security;
