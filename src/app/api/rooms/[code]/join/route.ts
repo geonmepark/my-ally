@@ -1,4 +1,5 @@
 import { joinRoom } from '@/lib/roomStore'
+import { getProfile } from '@/lib/profileStore'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
@@ -30,7 +31,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
     )
     const { data: { user } } = await adminClient.auth.getUser(token)
     if (user) {
-      await adminClient.from('rooms').update({ user_id_b: user.id }).eq('code', code)
+      const profile = await getProfile(user.id)
+      await adminClient
+        .from('rooms')
+        .update({ user_id_b: user.id, avatar_b: profile?.avatarUrl ?? null })
+        .eq('code', code)
     }
   }
 

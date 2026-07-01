@@ -17,6 +17,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cod
     status: room.status,
     nicknameA: room.nicknameA,
     nicknameB: room.nicknameB,
+    avatarA: room.avatarA,
+    avatarB: room.avatarB,
     // 제출 여부 (판결 전까지 내용 비공개, 판결 후 공개)
     submittedA: !!room.submissionA,
     submittedB: !!room.submissionB,

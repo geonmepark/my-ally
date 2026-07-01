@@ -8,6 +8,8 @@ export interface Room {
   status: RoomStatus
   nicknameA: string
   nicknameB: string | null
+  avatarA: string | null         // 입장 시점 프로필 아바타 스냅샷
+  avatarB: string | null
   submissionA: string | null
   submissionB: string | null
   clarificationA: string | null  // 결이가 A에게 묻는 추가 질문
@@ -30,6 +32,8 @@ function toRoom(row: Record<string, unknown>): Room {
     status: row.status as RoomStatus,
     nicknameA: row.nickname_a as string,
     nicknameB: (row.nickname_b as string | null) ?? null,
+    avatarA: (row.avatar_a as string | null) ?? null,
+    avatarB: (row.avatar_b as string | null) ?? null,
     submissionA: (row.submission_a as string | null) ?? null,
     submissionB: (row.submission_b as string | null) ?? null,
     clarificationA: (row.clarification_a as string | null) ?? null,
@@ -85,6 +89,8 @@ export async function updateRoom(code: string, updates: Partial<Room>): Promise<
   const dbUpdates: Record<string, unknown> = {}
   if (updates.status !== undefined) dbUpdates.status = updates.status
   if (updates.nicknameB !== undefined) dbUpdates.nickname_b = updates.nicknameB
+  if (updates.avatarA !== undefined) dbUpdates.avatar_a = updates.avatarA
+  if (updates.avatarB !== undefined) dbUpdates.avatar_b = updates.avatarB
   if (updates.submissionA !== undefined) dbUpdates.submission_a = updates.submissionA
   if (updates.submissionB !== undefined) dbUpdates.submission_b = updates.submissionB
   if (updates.clarificationA !== undefined) dbUpdates.clarification_a = updates.clarificationA
