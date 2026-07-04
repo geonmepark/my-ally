@@ -1,5 +1,6 @@
 import { getRoom, updateRoom } from '@/lib/roomStore'
 import { requestFinalVerdict } from '@/app/api/rooms/[code]/submit/route'
+import { notifyJudgeResubmitted } from '@/lib/push'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
@@ -37,6 +38,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
 
   if (bothResubmitted) {
     await updateRoom(code, { status: 'analyzing' })
+    if (updated.judgeType === 'human') {
+      // 시민판사 방: AI 최종판결 대신 판사에게 "최종 판결 차례" 푸시
+      if (updated.judgeUserId) notifyJudgeResubmitted(code, updated.judgeUserId).catch(() => {})
+      return NextResponse.json({ success: true, analyzing: true })
+    }
     void requestFinalVerdict(
       code,
       updated.nicknameA,

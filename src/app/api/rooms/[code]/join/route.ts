@@ -1,4 +1,4 @@
-import { joinRoom } from '@/lib/roomStore'
+import { joinRoom, getRoom } from '@/lib/roomStore'
 import { getProfile } from '@/lib/profileStore'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
@@ -15,6 +15,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
     return NextResponse.json({ error: '닉네임은 20자 이하로 입력해주세요' }, { status: 400 })
   }
 
+  // 인증 확인 — 시민판사 방은 판사 선택 동의·평가에 user id가 필수라 B도 로그인 강제
+  const serviceClient = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  const authHeader = req.headers.get('authorization')
+  let userId: string | null = null
+  if (authHeader) {
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user } } = await serviceClient.auth.getUser(token)
+    userId = user?.id ?? null
+  }
+
+  const existing = await getRoom(code)
+  if (!existing) {
+    return NextResponse.json({ error: '방을 찾을 수 없어요' }, { status: 404 })
+  }
+  if (existing.judgeType === 'human' && !userId) {
+    return NextResponse.json({ error: '시민판사 방은 로그인이 필요해요' }, { status: 401 })
+  }
+
   const result = await joinRoom(code, nickname)
 
   if ('error' in result) {
@@ -22,21 +43,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   }
 
   // 로그인한 유저라면 user_id_b 저장
-  const authHeader = req.headers.get('authorization')
-  if (authHeader) {
-    const token = authHeader.replace('Bearer ', '')
-    const adminClient = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-    const { data: { user } } = await adminClient.auth.getUser(token)
-    if (user) {
-      const profile = await getProfile(user.id)
-      await adminClient
-        .from('rooms')
-        .update({ user_id_b: user.id, avatar_b: profile?.avatarUrl ?? null })
-        .eq('code', code)
-    }
+  if (userId) {
+    const profile = await getProfile(userId)
+    await serviceClient
+      .from('rooms')
+      .update({ user_id_b: userId, avatar_b: profile?.avatarUrl ?? null })
+      .eq('code', code)
   }
 
   return NextResponse.json({

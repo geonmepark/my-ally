@@ -17,6 +17,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   const room = await getRoom(code)
   if (!room) return NextResponse.json({ error: '방을 찾을 수 없어요' }, { status: 404 })
 
+  // 시민판사 방은 재심 미지원 (판결 = 즉시 최종, 평가로 이어짐)
+  if (room.judgeType === 'human') {
+    return NextResponse.json({ error: '시민판사 방은 재심을 지원하지 않아요' }, { status: 400 })
+  }
+
   // ── 재심 시작 (텍스트 없이 즉시) ──────────────────────────────
   if (action === 'start') {
     if (room.status !== 'verdict') {

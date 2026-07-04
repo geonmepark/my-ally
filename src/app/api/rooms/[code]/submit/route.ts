@@ -43,15 +43,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   const bothSubmitted = !!(updated.submissionA && updated.submissionB)
 
   if (bothSubmitted) {
-    await updateRoom(code, { status: 'analyzing' })
-    void analyzeAndDecide(
-      code,
-      updated.nicknameA,
-      updated.nicknameB!,
-      updated.submissionA!,
-      updated.submissionB!,
-      updated.judge,
-    )
+    if (updated.judgeType === 'human') {
+      // 시민판사 방: AI를 부르지 않고 판사 모집 시작
+      await updateRoom(code, { status: 'recruiting_judge' })
+    } else {
+      await updateRoom(code, { status: 'analyzing' })
+      void analyzeAndDecide(
+        code,
+        updated.nicknameA,
+        updated.nicknameB!,
+        updated.submissionA!,
+        updated.submissionB!,
+        updated.judge,
+      )
+    }
   }
 
   return NextResponse.json({ success: true, analyzing: bothSubmitted })

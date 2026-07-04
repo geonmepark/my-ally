@@ -1,7 +1,8 @@
 import { getSupabase } from './supabase'
 
-export type RoomStatus = 'waiting' | 'partial' | 'analyzing' | 'clarifying' | 'verdict' | 'failed' | 'appealing'
+export type RoomStatus = 'waiting' | 'partial' | 'recruiting_judge' | 'analyzing' | 'clarifying' | 'verdict' | 'failed' | 'appealing'
 export type Winner = 'A' | 'B'
+export type JudgeType = 'ai' | 'human'
 
 export interface Room {
   code: string
@@ -18,11 +19,17 @@ export interface Room {
   resubmissionB: string | null   // B의 추가 답변
   verdictText: string | null
   winner: Winner | null
-  judge: string                  // 판사 모델 ('gemini' | 'claude')
+  judge: string                  // 판사 모델 ('gemini' | 'claude') — judgeType='ai'일 때 사용
+  judgeType: JudgeType           // 'ai'(결이) | 'human'(시민판사)
+  judgeUserId: string | null     // 확정된 시민판사 user id
+  caseSummary: string | null     // 모집 리스트 공개용 한 줄 소개(방장 작성)
+  recruitDeadline: string | null // 모집 마감(timestamptz ISO)
   appealBy: 'A' | 'B' | null    // 재심 신청한 쪽
   appealText: string | null      // 재심 신청 내용
   winnerNote: string | null      // 이긴 쪽 추가 의견
   retrialDone: boolean           // 재심 완료 여부
+  userIdA: string | null         // 당사자 A (authz용 — GET 응답에 노출 금지)
+  userIdB: string | null         // 당사자 B (authz용 — GET 응답에 노출 금지)
   createdAt: number
 }
 
@@ -43,10 +50,16 @@ function toRoom(row: Record<string, unknown>): Room {
     verdictText: (row.verdict_text as string | null) ?? null,
     winner: (row.winner as Winner | null) ?? null,
     judge: (row.judge as string | null) ?? 'gemini',
+    judgeType: (row.judge_type as JudgeType | null) ?? 'ai',
+    judgeUserId: (row.judge_user_id as string | null) ?? null,
+    caseSummary: (row.case_summary as string | null) ?? null,
+    recruitDeadline: (row.recruit_deadline as string | null) ?? null,
     appealBy: (row.appeal_by as 'A' | 'B' | null) ?? null,
     appealText: (row.appeal_text as string | null) ?? null,
     winnerNote: (row.winner_note as string | null) ?? null,
     retrialDone: (row.retrial_done as boolean) ?? false,
+    userIdA: (row.user_id_a as string | null) ?? null,
+    userIdB: (row.user_id_b as string | null) ?? null,
     createdAt: row.created_at as number,
   }
 }
@@ -56,13 +69,34 @@ function generateCode(): string {
   return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
 }
 
-export async function createRoom(nicknameA: string, judge = 'gemini'): Promise<Room> {
+export interface CreateRoomOptions {
+  judge?: string            // AI 모델 ('gemini' | 'claude')
+  judgeType?: JudgeType     // 'ai'(기본) | 'human'(시민판사)
+  caseSummary?: string      // human일 때 모집 리스트 공개용 한 줄 소개
+}
+
+const RECRUIT_DAYS = 7 // 시민판사 모집 기본 기간
+
+export async function createRoom(nicknameA: string, options: CreateRoomOptions = {}): Promise<Room> {
+  const { judge = 'gemini', judgeType = 'ai', caseSummary } = options
   const db = getSupabase()
   for (let attempt = 0; attempt < 10; attempt++) {
     const code = generateCode()
     const { data, error } = await db
       .from('rooms')
-      .insert({ code, status: 'waiting', nickname_a: nicknameA, judge, created_at: Date.now() })
+      .insert({
+        code,
+        status: 'waiting',
+        nickname_a: nicknameA,
+        judge,
+        judge_type: judgeType,
+        case_summary: judgeType === 'human' ? (caseSummary ?? null) : null,
+        recruit_deadline:
+          judgeType === 'human'
+            ? new Date(Date.now() + RECRUIT_DAYS * 24 * 60 * 60 * 1000).toISOString()
+            : null,
+        created_at: Date.now(),
+      })
       .select()
       .single()
 
@@ -100,6 +134,10 @@ export async function updateRoom(code: string, updates: Partial<Room>): Promise<
   if (updates.verdictText !== undefined) dbUpdates.verdict_text = updates.verdictText
   if (updates.winner !== undefined) dbUpdates.winner = updates.winner
   if (updates.judge !== undefined) dbUpdates.judge = updates.judge
+  if (updates.judgeType !== undefined) dbUpdates.judge_type = updates.judgeType
+  if (updates.judgeUserId !== undefined) dbUpdates.judge_user_id = updates.judgeUserId
+  if (updates.caseSummary !== undefined) dbUpdates.case_summary = updates.caseSummary
+  if (updates.recruitDeadline !== undefined) dbUpdates.recruit_deadline = updates.recruitDeadline
   if (updates.appealBy !== undefined) dbUpdates.appeal_by = updates.appealBy
   if (updates.appealText !== undefined) dbUpdates.appeal_text = updates.appealText
   if (updates.winnerNote !== undefined) dbUpdates.winner_note = updates.winnerNote

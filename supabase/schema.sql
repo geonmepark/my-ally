@@ -43,9 +43,75 @@ alter table rooms add column if not exists user_id_b    uuid;
 alter table rooms add column if not exists avatar_a     text;
 alter table rooms add column if not exists avatar_b     text;
 
+-- 시민판사(사람 판사) 확장 (2026-07)
+-- judge_type: 'ai'(기본, 결이) | 'human'(시민판사). human이면 양측 제출 완료 시 status='recruiting_judge'.
+-- judge_user_id: 확정된 시민판사의 auth user id.
+-- case_summary: 모집 리스트 공개용 한 줄 소개(방장 작성, 주장 원문은 절대 미노출).
+-- recruit_deadline: 모집 마감(기본 생성+7일).
+alter table rooms add column if not exists judge_type       text not null default 'ai';
+alter table rooms add column if not exists judge_user_id    uuid;
+alter table rooms add column if not exists case_summary     text;
+alter table rooms add column if not exists recruit_deadline timestamptz;
+
 -- RLS 활성화 + 정책 없음(deny-all): anon/authenticated 직접 접근 차단.
 -- 모든 DB 접근은 API Route(service_role, RLS 우회) 경유. 클라이언트 직접 호출 금지.
 alter table rooms enable row level security;
+
+-- 시민판사 프로필 (판사 활동용 자기소개 + 통계 캐시)
+-- profiles(표시 이름/아바타)와 별개 — 판사로 활동할 때만 lazy 생성.
+-- 통계는 verdict_reviews 반영 시 API가 갱신하는 캐시(정본은 verdict_reviews).
+create table if not exists judge_profiles (
+  user_id          uuid         primary key,
+  bio              text         not null default '',   -- 기본 자기소개(지원 시 pitch 초안으로 자동채움)
+  verdict_count    int          not null default 0,    -- 내린 판결 수
+  review_count     int          not null default 0,    -- 받은 평가 수
+  convinced_count  int          not null default 0,    -- '납득' 받은 수 (납득률 = convinced/review)
+  tag_counts       jsonb        not null default '{}', -- 태그별 누적 {"명쾌함": 3, ...}
+  created_at       timestamptz  not null default now(),
+  updated_at       timestamptz  not null default now()
+);
+
+alter table judge_profiles enable row level security;
+
+-- 시민판사 지원서 (방 1건 × 판사 1명 = 1지원)
+-- status: applied(지원) | proposed(방장이 지목, 상대 동의 대기) | selected(확정)
+--         | excluded(거부 3회 누적 — 이 방에서 채택 불가) | withdrawn(지원 철회)
+create table if not exists judge_applications (
+  id             uuid         primary key default gen_random_uuid(),
+  room_code      varchar(6)   not null,
+  judge_user_id  uuid         not null,
+  pitch          text         not null,               -- 케이스별 지원문
+  status         text         not null default 'applied',
+  reject_count   int          not null default 0,     -- 상대 거부 누적(3회 → excluded)
+  created_at     timestamptz  not null default now(),
+  unique (room_code, judge_user_id)
+);
+
+create index if not exists judge_applications_room_idx
+  on judge_applications (room_code, status);
+
+alter table judge_applications enable row level security;
+
+-- 판결 평가 (사람판사 방, 판결 확정 후 side당 1회 — 재평가 불가)
+-- convinced: "이 판결, 납득되셨나요?" — 별점 대신 납득 Y/N이 헤드라인 지표.
+-- tags: 판사 인상 태그(명쾌함/논리적/공감/성의 등). reason_tags: 👎일 때 필수 이유 태그.
+create table if not exists verdict_reviews (
+  id                uuid         primary key default gen_random_uuid(),
+  room_code         varchar(6)   not null,
+  reviewer_side     text         not null,             -- 'A' | 'B'
+  reviewer_user_id  uuid,
+  judge_user_id     uuid         not null,
+  convinced         boolean      not null,
+  tags              text[]       not null default '{}',
+  reason_tags       text[]       not null default '{}',
+  created_at        timestamptz  not null default now(),
+  unique (room_code, reviewer_side)
+);
+
+create index if not exists verdict_reviews_judge_idx
+  on verdict_reviews (judge_user_id, created_at desc);
+
+alter table verdict_reviews enable row level security;
 
 -- 사용자 프로필 (SNS형 이름 + 아바타). 가입 시 SNS 메타데이터로 lazy-seed.
 -- display_name: 표시 이름(≤20자), 1일 1회만 변경(name_changed_at 기준 API에서 판정).
