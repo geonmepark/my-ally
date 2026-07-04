@@ -160,7 +160,17 @@ export async function joinRoom(code: string, nicknameB: string): Promise<Room | 
   if (room.nicknameB) return { error: '이미 두 명이 참여한 방이에요' }
   if (room.status === 'verdict') return { error: '이미 판결이 완료된 방이에요' }
 
-  const updated = await updateRoom(code, { nicknameB, status: 'partial' })
-  if (!updated) return { error: '참여 처리 중 오류가 발생했어요' }
-  return updated
+  // 동시 참여 경쟁조건 방지: nickname_b가 아직 비어있는 행만 원자적으로 선점.
+  // 그 사이 다른 사람이 먼저 참여했으면 행이 안 돌아온다(늦은 쪽 덮어쓰기 차단).
+  const db = getSupabase()
+  const { data, error } = await db
+    .from('rooms')
+    .update({ nickname_b: nicknameB, status: 'partial' })
+    .eq('code', code.toUpperCase().trim())
+    .is('nickname_b', null)
+    .select()
+    .single()
+
+  if (error || !data) return { error: '이미 두 명이 참여한 방이에요' }
+  return toRoom(data)
 }
