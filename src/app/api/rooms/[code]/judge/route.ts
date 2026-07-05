@@ -93,7 +93,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
     if (app.status !== 'applied') {
       return NextResponse.json({ error: '지목할 수 없는 지원서예요' }, { status: 400 })
     }
-    await updateApplication(app.id, { status: 'proposed' })
+    // applied일 때만 원자 갱신 — 더블클릭으로 proposed가 2개 생겨 흐름이 잠기는 것 방지
+    const proposed = await updateApplication(app.id, { status: 'proposed' }, 'applied')
+    if (!proposed) return NextResponse.json({ error: '이미 처리된 지원서예요' }, { status: 409 })
     return NextResponse.json({ success: true })
   }
 
@@ -113,15 +115,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
     if (action === 'reject') {
       const rejectCount = app.rejectCount + 1
       // 3회 누적 거부 → 이 방에서 채택 불가(excluded). 다른 지원자는 그대로 유효.
-      await updateApplication(app.id, {
-        rejectCount,
-        status: rejectCount >= MAX_REJECTS ? 'excluded' : 'applied',
-      })
+      // proposed일 때만 원자 갱신 — 동시 accept/reject 이중 처리 방지.
+      const rejected = await updateApplication(
+        app.id,
+        { rejectCount, status: rejectCount >= MAX_REJECTS ? 'excluded' : 'applied' },
+        'proposed',
+      )
+      if (!rejected) return NextResponse.json({ error: '이미 처리된 지원서예요' }, { status: 409 })
       return NextResponse.json({ success: true, excluded: rejectCount >= MAX_REJECTS })
     }
 
     // accept → 판사 확정, 판결 작성 단계로 (기존 analyzing 재사용 — 앱이 judgeType으로 문구 분기)
-    await updateApplication(app.id, { status: 'selected' })
+    // proposed일 때만 원자 갱신 — reject와의 동시 처리 레이스 차단.
+    const selected = await updateApplication(app.id, { status: 'selected' }, 'proposed')
+    if (!selected) return NextResponse.json({ error: '이미 처리된 지원서예요' }, { status: 409 })
     const updated = await updateRoom(code, { judgeUserId: app.judgeUserId, status: 'analyzing' })
     if (!updated) return NextResponse.json({ error: '처리 중 오류가 발생했어요' }, { status: 500 })
     notifyJudgeSelected(code, app.judgeUserId).catch(() => {})

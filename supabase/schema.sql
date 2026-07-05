@@ -113,6 +113,41 @@ create index if not exists verdict_reviews_judge_idx
 
 alter table verdict_reviews enable row level security;
 
+-- 판사 통계 캐시 원자 갱신 함수 (JS read-modify-write는 동시 평가 시 증가분 유실 →
+-- 납득률(신뢰 핵심 지표) 오염. SQL 단일 문으로 원자화. service_role만 호출)
+create or replace function apply_judge_review(p_judge uuid, p_convinced boolean, p_tags text[])
+returns void
+language plpgsql
+as $$
+declare
+  t text;
+begin
+  insert into judge_profiles (user_id) values (p_judge) on conflict (user_id) do nothing;
+  update judge_profiles
+    set review_count    = review_count + 1,
+        convinced_count = convinced_count + (case when p_convinced then 1 else 0 end),
+        updated_at      = now()
+    where user_id = p_judge;
+  foreach t in array p_tags loop
+    update judge_profiles
+      set tag_counts = jsonb_set(tag_counts, array[t], to_jsonb(coalesce((tag_counts->>t)::int, 0) + 1))
+      where user_id = p_judge;
+  end loop;
+end
+$$;
+
+create or replace function increment_judge_verdict(p_judge uuid)
+returns void
+language plpgsql
+as $$
+begin
+  insert into judge_profiles (user_id) values (p_judge) on conflict (user_id) do nothing;
+  update judge_profiles
+    set verdict_count = verdict_count + 1, updated_at = now()
+    where user_id = p_judge;
+end
+$$;
+
 -- 사용자 프로필 (SNS형 이름 + 아바타). 가입 시 SNS 메타데이터로 lazy-seed.
 -- display_name: 표시 이름(≤20자), 1일 1회만 변경(name_changed_at 기준 API에서 판정).
 -- avatar_url: Storage 'avatars' 버킷 public URL (nullable).

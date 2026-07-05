@@ -1,9 +1,10 @@
 import { getRoom } from '@/lib/roomStore'
 import { getProfile } from '@/lib/profileStore'
+import { getAuthedUser } from '@/lib/account'
 import { getSupabase } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
   const room = await getRoom(code)
 
@@ -16,6 +17,17 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cod
 
   // ── 시민판사 부가 정보 (human 방에서만 조회) ──
   const isHuman = room.judgeType === 'human'
+
+  // 시민판사 방 익명화 보호: 모집 리스트는 익명(코드+한줄)만 노출하는데,
+  // 이 GET이 코드만으로 닉네임/아바타를 돌려주면 우회로가 된다.
+  // → human 방은 당사자(userIdA/B)·확정 판사만 신원 필드를 본다. (AI 방은 기존 코드=능력 유지)
+  let maskIdentity = false
+  if (isHuman) {
+    const user = await getAuthedUser(req.headers.get('authorization'))
+    const isParticipant =
+      !!user && (room.userIdA === user.id || room.userIdB === user.id || room.judgeUserId === user.id)
+    maskIdentity = !isParticipant
+  }
   let judgeName: string | null = null
   let applicantCount = 0
   let reviewedA = false
@@ -47,10 +59,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ cod
   return NextResponse.json({
     code: room.code,
     status: room.status,
-    nicknameA: room.nicknameA,
-    nicknameB: room.nicknameB,
-    avatarA: room.avatarA,
-    avatarB: room.avatarB,
+    nicknameA: maskIdentity ? '참가자 A' : room.nicknameA,
+    nicknameB: maskIdentity ? (room.nicknameB ? '참가자 B' : null) : room.nicknameB,
+    avatarA: maskIdentity ? null : room.avatarA,
+    avatarB: maskIdentity ? null : room.avatarB,
     // 제출 여부 (판결 전까지 내용 비공개, 판결 후 공개)
     submittedA: !!room.submissionA,
     submittedB: !!room.submissionB,

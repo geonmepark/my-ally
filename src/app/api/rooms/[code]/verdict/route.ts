@@ -26,7 +26,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   if (room.judgeUserId !== user.id) {
     return NextResponse.json({ error: '이 사건의 판사만 판결할 수 있어요' }, { status: 403 })
   }
-  if (room.status !== 'analyzing') {
+  // 상태 게이트는 액션별로: clarify는 analyzing에서만,
+  // verdict는 analyzing + clarifying 둘 다 허용 — 한쪽이 답변을 끝내 안 하면(고스팅)
+  // 방이 clarifying에 영구 잠기는 데드락을 판사가 기존 답변만으로 판결해 해소할 수 있게.
+  if (room.status !== 'analyzing' && room.status !== 'clarifying') {
     return NextResponse.json({ error: '판결을 작성할 수 있는 상태가 아니에요' }, { status: 400 })
   }
 
@@ -35,6 +38,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
 
   // ── 추가질문 (1회 — 기존 clarification 컬럼 재사용) ──
   if (action === 'clarify') {
+    if (room.status !== 'analyzing') {
+      return NextResponse.json({ error: '추가 질문은 검토 단계에서만 할 수 있어요' }, { status: 400 })
+    }
     if (room.clarificationA || room.clarificationB) {
       return NextResponse.json({ error: '추가 질문은 한 번만 할 수 있어요' }, { status: 400 })
     }

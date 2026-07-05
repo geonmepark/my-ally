@@ -68,6 +68,7 @@ export async function purgeUser(userId: string) {
 }
 
 // 유예 기간이 지난 예약 건을 모두 완전 삭제 처리한다.
+// 한 건 실패가 나머지 전체를 막지 않도록 건별 격리 — 실패 건은 pending에 남아 다음 cron에서 재시도.
 export async function purgeExpiredDeletions() {
   const db = getSupabase()
   const { data, error } = await db
@@ -76,8 +77,14 @@ export async function purgeExpiredDeletions() {
     .lte('scheduled_at', new Date().toISOString())
   if (error) throw error
   const ids = (data ?? []).map((r) => r.user_id as string)
+  let purged = 0
   for (const id of ids) {
-    await purgeUser(id)
+    try {
+      await purgeUser(id)
+      purged++
+    } catch (e) {
+      console.error(`[purge] 계정 완전삭제 실패 — 다음 주기에 재시도 (user=${id})`, e)
+    }
   }
-  return ids.length
+  return purged
 }

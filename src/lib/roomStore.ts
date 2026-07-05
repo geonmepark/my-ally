@@ -154,18 +154,61 @@ export async function updateRoom(code: string, updates: Partial<Room>): Promise<
   return toRoom(data)
 }
 
-export async function joinRoom(code: string, nicknameB: string): Promise<Room | { error: string }> {
+// 양측 제출 완료 시 상태 전이를 원자적으로 선점 (동시 제출 레이스 방지).
+// 두 submission이 모두 차 있고 아직 전이 전(waiting|partial)일 때만 전이 — 이긴 요청만 Room을 받는다.
+// (READ COMMITTED에서 각자 자기 행만 보고 bothSubmitted를 계산하면 양쪽 다 false가 될 수 있음)
+export async function claimBothSubmitted(code: string, next: 'analyzing' | 'recruiting_judge'): Promise<Room | null> {
+  const db = getSupabase()
+  const { data, error } = await db
+    .from('rooms')
+    .update({ status: next })
+    .eq('code', code.toUpperCase().trim())
+    .in('status', ['waiting', 'partial'])
+    .not('submission_a', 'is', null)
+    .not('submission_b', 'is', null)
+    .select()
+    .single()
+  if (error || !data) return null
+  return toRoom(data)
+}
+
+// 양측 추가답변 완료 시 clarifying → analyzing 전이 원자 선점 (위와 동일한 레이스 방지)
+export async function claimBothResubmitted(code: string): Promise<Room | null> {
+  const db = getSupabase()
+  const { data, error } = await db
+    .from('rooms')
+    .update({ status: 'analyzing' })
+    .eq('code', code.toUpperCase().trim())
+    .eq('status', 'clarifying')
+    .not('resubmission_a', 'is', null)
+    .not('resubmission_b', 'is', null)
+    .select()
+    .single()
+  if (error || !data) return null
+  return toRoom(data)
+}
+
+export async function joinRoom(
+  code: string,
+  nicknameB: string,
+  identity?: { userId: string; avatarUrl: string | null },
+): Promise<Room | { error: string }> {
   const room = await getRoom(code)
   if (!room) return { error: '방을 찾을 수 없어요' }
   if (room.nicknameB) return { error: '이미 두 명이 참여한 방이에요' }
   if (room.status === 'verdict') return { error: '이미 판결이 완료된 방이에요' }
 
   // 동시 참여 경쟁조건 방지: nickname_b가 아직 비어있는 행만 원자적으로 선점.
-  // 그 사이 다른 사람이 먼저 참여했으면 행이 안 돌아온다(늦은 쪽 덮어쓰기 차단).
+  // user_id_b/avatar_b도 같은 업데이트에 포함 — 선점과 신원이 함께 커밋되어
+  // "닉네임은 있는데 user_id가 없는" 반쪽 상태(후속 authz 전부 파손)를 차단.
   const db = getSupabase()
   const { data, error } = await db
     .from('rooms')
-    .update({ nickname_b: nicknameB, status: 'partial' })
+    .update({
+      nickname_b: nicknameB,
+      status: 'partial',
+      ...(identity ? { user_id_b: identity.userId, avatar_b: identity.avatarUrl } : {}),
+    })
     .eq('code', code.toUpperCase().trim())
     .is('nickname_b', null)
     .select()

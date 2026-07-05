@@ -149,18 +149,16 @@ export async function createApplication(
 export async function updateApplication(
   id: string,
   updates: Partial<Pick<JudgeApplication, 'status' | 'pitch' | 'rejectCount'>>,
+  expectStatus?: ApplicationStatus, // 지정 시 해당 상태일 때만 갱신(원자 가드 — 더블클릭/동시 처리 방지)
 ): Promise<JudgeApplication | null> {
   const db = getSupabase()
   const dbUpdates: Record<string, unknown> = {}
   if (updates.status !== undefined) dbUpdates.status = updates.status
   if (updates.pitch !== undefined) dbUpdates.pitch = updates.pitch
   if (updates.rejectCount !== undefined) dbUpdates.reject_count = updates.rejectCount
-  const { data, error } = await db
-    .from('judge_applications')
-    .update(dbUpdates)
-    .eq('id', id)
-    .select()
-    .single()
+  let query = db.from('judge_applications').update(dbUpdates).eq('id', id)
+  if (expectStatus) query = query.eq('status', expectStatus)
+  const { data, error } = await query.select().single()
   if (error || !data) return null
   return toApplication(data)
 }
@@ -207,6 +205,7 @@ export async function listRecruitingCases(excludeUserId: string) {
     .from('rooms')
     .select('code, case_summary, created_at, recruit_deadline, user_id_a, user_id_b')
     .eq('status', 'recruiting_judge')
+    .gt('recruit_deadline', new Date().toISOString()) // 마감 지난 사건은 리스트에서 제외(당사자는 수동 AI 전환 가능)
     .order('created_at', { ascending: false })
     .limit(50)
 
@@ -282,28 +281,20 @@ export async function createReview(input: {
   if (error?.code === '23505') return { error: '이미 평가했어요', status: 409 }
   if (error) return { error: '평가 처리 중 오류가 발생했어요', status: 500 }
 
-  // 판사 프로필 통계 캐시 갱신 (정본은 verdict_reviews)
-  const profile = await getOrCreateJudgeProfile(input.judgeUserId)
-  const tagCounts = { ...profile.tagCounts }
-  for (const tag of input.tags) tagCounts[tag] = (tagCounts[tag] ?? 0) + 1
-  await db
-    .from('judge_profiles')
-    .update({
-      review_count: profile.reviewCount + 1,
-      convinced_count: profile.convincedCount + (input.convinced ? 1 : 0),
-      tag_counts: tagCounts,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('user_id', input.judgeUserId)
+  // 판사 프로필 통계 캐시 갱신 — 원자 RPC(schema.sql apply_judge_review).
+  // JS read-modify-write는 동시 평가 시 증가분이 유실돼 납득률이 오염된다.
+  const { error: rpcError } = await db.rpc('apply_judge_review', {
+    p_judge: input.judgeUserId,
+    p_convinced: input.convinced,
+    p_tags: input.tags,
+  })
+  if (rpcError) console.error('[judgeStore] apply_judge_review 실패', rpcError)
 
   return { ok: true }
 }
 
 export async function incrementVerdictCount(judgeUserId: string) {
   const db = getSupabase()
-  const profile = await getOrCreateJudgeProfile(judgeUserId)
-  await db
-    .from('judge_profiles')
-    .update({ verdict_count: profile.verdictCount + 1, updated_at: new Date().toISOString() })
-    .eq('user_id', judgeUserId)
+  const { error } = await db.rpc('increment_judge_verdict', { p_judge: judgeUserId })
+  if (error) console.error('[judgeStore] increment_judge_verdict 실패', error)
 }

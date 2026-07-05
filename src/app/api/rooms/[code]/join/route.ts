@@ -1,7 +1,7 @@
 import { joinRoom, getRoom } from '@/lib/roomStore'
 import { getProfile } from '@/lib/profileStore'
+import { getAuthedUser } from '@/lib/account'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params
@@ -16,39 +16,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   }
 
   // 인증 확인 — 시민판사 방은 판사 선택 동의·평가에 user id가 필수라 B도 로그인 강제
-  const serviceClient = createClient(
-    process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-  const authHeader = req.headers.get('authorization')
-  let userId: string | null = null
-  if (authHeader) {
-    const token = authHeader.replace('Bearer ', '')
-    const { data: { user } } = await serviceClient.auth.getUser(token)
-    userId = user?.id ?? null
-  }
+  const user = await getAuthedUser(req.headers.get('authorization'))
 
   const existing = await getRoom(code)
   if (!existing) {
     return NextResponse.json({ error: '방을 찾을 수 없어요' }, { status: 404 })
   }
-  if (existing.judgeType === 'human' && !userId) {
+  if (existing.judgeType === 'human' && !user) {
     return NextResponse.json({ error: '시민판사 방은 로그인이 필요해요' }, { status: 401 })
   }
 
-  const result = await joinRoom(code, nickname)
+  // 신원(user_id_b/avatar_b)은 joinRoom의 원자 선점 업데이트에 함께 커밋 —
+  // "닉네임만 있고 user_id 없는" 반쪽 참여(후속 authz 파손) 차단.
+  const profile = user ? await getProfile(user.id) : null
+  const result = await joinRoom(
+    code,
+    nickname,
+    user ? { userId: user.id, avatarUrl: profile?.avatarUrl ?? null } : undefined,
+  )
 
   if ('error' in result) {
-    return NextResponse.json({ error: result.error }, { status: 404 })
-  }
-
-  // 로그인한 유저라면 user_id_b 저장
-  if (userId) {
-    const profile = await getProfile(userId)
-    await serviceClient
-      .from('rooms')
-      .update({ user_id_b: userId, avatar_b: profile?.avatarUrl ?? null })
-      .eq('code', code)
+    // 방 부재만 404 — "이미 두 명 참여"/"판결 완료"는 방이 존재하므로 400이 맞다
+    const status = result.error === '방을 찾을 수 없어요' ? 404 : 400
+    return NextResponse.json({ error: result.error }, { status })
   }
 
   return NextResponse.json({

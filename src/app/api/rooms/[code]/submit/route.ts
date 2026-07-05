@@ -1,4 +1,5 @@
-import { getRoom, updateRoom, Room } from '@/lib/roomStore'
+import { getRoom, updateRoom, claimBothSubmitted, Room } from '@/lib/roomStore'
+import { getAuthedUser } from '@/lib/account'
 import { notifyVerdict } from '@/lib/push'
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
@@ -29,6 +30,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   const room = await getRoom(code)
   if (!room) return NextResponse.json({ error: '방을 찾을 수 없어요' }, { status: 404 })
 
+  // 시민판사 방: 신원이 load-bearing(판사 배정·평가가 user id 기반) — side 자기주장 금지.
+  // 로그인 필수 + side는 room.userIdA/B 대조로 검증. (AI 방은 기존 '코드=능력' 모델 유지)
+  if (room.judgeType === 'human') {
+    const user = await getAuthedUser(req.headers.get('authorization'))
+    if (!user) return NextResponse.json({ error: '로그인이 필요해요' }, { status: 401 })
+    const mySide = room.userIdA === user.id ? 'A' : room.userIdB === user.id ? 'B' : null
+    if (!mySide || mySide !== side) {
+      return NextResponse.json({ error: '본인 측으로만 제출할 수 있어요' }, { status: 403 })
+    }
+  }
+
+  // B가 아직 참여 전인데 side B로 제출하는 비정상 경로 차단 (코드만 아는 제3자의 선점 방지)
+  if (side === 'B' && !room.nicknameB) {
+    return NextResponse.json({ error: '상대방이 아직 참여하지 않았어요' }, { status: 400 })
+  }
+
   if (side === 'A' && room.submissionA) {
     return NextResponse.json({ error: '이미 제출했어요' }, { status: 400 })
   }
@@ -40,26 +57,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ cod
   const updated = await updateRoom(code, update)
   if (!updated) return NextResponse.json({ error: '제출 처리 중 오류가 발생했어요' }, { status: 500 })
 
-  const bothSubmitted = !!(updated.submissionA && updated.submissionB)
+  // 상태 전이는 원자적 조건부 업데이트로 선점 — 동시 제출 시 어느 쪽도 전이를 못 보는
+  // 레이스(방 영구 멈춤)와 AI 이중 트리거를 동시에 차단. 선점 성공 요청만 후속 처리.
+  const nextStatus = updated.judgeType === 'human' ? 'recruiting_judge' : 'analyzing'
+  const claimed = await claimBothSubmitted(code, nextStatus)
 
-  if (bothSubmitted) {
-    if (updated.judgeType === 'human') {
-      // 시민판사 방: AI를 부르지 않고 판사 모집 시작
-      await updateRoom(code, { status: 'recruiting_judge' })
-    } else {
-      await updateRoom(code, { status: 'analyzing' })
-      void analyzeAndDecide(
-        code,
-        updated.nicknameA,
-        updated.nicknameB!,
-        updated.submissionA!,
-        updated.submissionB!,
-        updated.judge,
-      )
-    }
+  if (claimed && claimed.judgeType !== 'human') {
+    void analyzeAndDecide(
+      code,
+      claimed.nicknameA,
+      claimed.nicknameB!,
+      claimed.submissionA!,
+      claimed.submissionB!,
+      claimed.judge,
+    )
   }
 
+  const bothSubmitted = !!(updated.submissionA && updated.submissionB) || !!claimed
   return NextResponse.json({ success: true, analyzing: bothSubmitted })
+}
+
+// 판결문에서 승자 태그 파싱. 태그가 아예 없으면(모델 응답 이상) A 기본값이지만
+// 무음으로 넘기지 않고 로그를 남긴다 — "A가 몰래 이기는" 사고 추적 가능하게.
+function parseWinner(text: string, code: string): 'A' | 'B' {
+  if (text.includes('[승자: B]')) return 'B'
+  if (!text.includes('[승자: A]')) {
+    console.error(`[verdict] 승자 태그 누락 — A 기본값 적용 (room=${code}, tail="${text.slice(-80)}")`)
+  }
+  return 'A'
 }
 
 // ── AI 호출 헬퍼 ───────────────────────────────────────────────
@@ -141,7 +166,7 @@ export async function analyzeAndDecide(
       const qB = extractAfter(text, '[B질문]:') ?? '상대방의 입장에서 이해하기 어려운 부분이 있었나요? 설명해주세요.'
       await updateRoom(code, { status: 'clarifying', clarificationA: qA.trim(), clarificationB: qB.trim() })
     } else {
-      const winner = text.includes('[승자: B]') ? 'B' : 'A'
+      const winner = parseWinner(text, code)
       const cleanText = text.replace(/\[승자: (A|B)\]/g, '').trim()
       await updateRoom(code, { status: 'verdict', verdictText: cleanText, winner })
       notifyVerdict(code).catch(() => {})
@@ -185,7 +210,7 @@ export async function requestFinalVerdict(
   const saveVerdict = async (text: string) => {
     const elapsed = Date.now() - start
     if (elapsed < MIN_MS) await new Promise(r => setTimeout(r, MIN_MS - elapsed))
-    const winner = text.includes('[승자: B]') ? 'B' : 'A'
+    const winner = parseWinner(text, code)
     const cleanText = text.replace(/\[승자: (A|B)\]/g, '').trim()
     await updateRoom(code, { status: 'verdict', verdictText: cleanText, winner })
     notifyVerdict(code).catch(() => {})
@@ -362,7 +387,7 @@ export async function requestRetrial(code: string, room: Room) {
   const saveVerdict = async (text: string) => {
     const elapsed = Date.now() - start
     if (elapsed < MIN_MS) await new Promise(r => setTimeout(r, MIN_MS - elapsed))
-    const winner = text.includes('[승자: B]') ? 'B' : 'A'
+    const winner = parseWinner(text, code)
     const cleanText = text.replace(/\[승자: (A|B)\]/g, '').trim()
     await updateRoom(code, { status: 'verdict', verdictText: cleanText, winner, retrialDone: true })
     notifyVerdict(code).catch(() => {})
